@@ -77,3 +77,14 @@ Kaynaklar: Nuvia `Cosa_v5_Installation_User_Manual.pdf` ve `Cosa_Product_Docs_v5
 - `[ölçüldü: kullanıcı ekran görüntüsü]` Telefondaki Cosa uygulaması (telefonun kendi DNS günlüğü, LTE üzerinden) `kiwi-api.nuvia.com.tr` adresini sorguluyor; adres AWS eu-west-1 (İrlanda) yük dengeleyicisine CNAME veriyor. Bu **uygulama↔bulut** trafiğidir, cihazınki değil.
 - `[ölçüldü]` TP-Link AX12 sistem günlüğü yalnızca servis olaylarını (NAT, QoS, PPP vb.) içerir; **DNS sorgusu veya cihaz bazlı bağlantı kaydı yok.** Router üzerinden cihaz trafiği gözlemlenemez.
 
+### Derin araştırma (2026-10-08)
+
+- `[belgeli: Espressif, 2020-12-29]` Tüm Cosa cihazları **ESP32** ile çalışır; Nuvia'nın alt sistemleri **ESP-NOW** ile birbirine bağlanır (Wi-Fi'siz, eşler arası, el sıkışmasız 2.4 GHz protokolü). Kullanıcı tek bir cihaz üzerinden uygulama ve buluta bağlanır. Makale 2020 tarihlidir; yeni donanım farklı olabilir. Hangi üründe hangi modülün olduğu, şifreleme ve kanal yönetimi belirtilmemiştir.
+- `[çıkarım]` Kılavuzdaki "termostat ↔ alıcı eşleşmesi" (Pair düğmesi/P09, fabrikada eşleşmiş) ve Wi-Fi'ya girmeyen 2.4 GHz bağlantı, ESP-NOW ile uyumludur. Doğrulanmadı.
+- `[ölçüldü]` DNS gözlemi sonuçsuz: alıcı ünite, router DHCP DNS'i değiştirildiğinde ve cihaz yeniden başlatıldığında bile yerel DNS'e **hiç sorgu göndermedi**. Sabit kodlanmış DNS veya doğrudan IP kullanımı olası.
+- `[ölçüldü]` Topluluk depolarının tüm git geçmişinde WebSocket/MQTT/yerel protokol kodu yok; yalnızca bulut HTTPS API'si (`kiwi-api.nuvia.com.tr`).
+- `[açık]` Android uygulaması `com.nuvia.cosa`: izinler (Bluetooth/yakın cihazlar) ve eşleştirme yöntemi (BLE/SoftAP) doğrulanmadı; Exodus raporu bulunamadı.
+
+#### Olası yerel yol: ESP-NOW ile eşler arası haberleşme
+
+Alıcı ünite termostatla ESP-NOW ile konuşuyorsa, bu konuşma Wi-Fi/bulut gerektirmez. Başka bir ESP32 aynı protokolle (a) trafiği dinleyip biçimi çözebilir, (b) alıcıya eş olarak komut gönderebilir. ESPHome 2025.8'den beri bir `espnow` bileşeni sunar. **Engeller:** şifreleme (ESP-NOW şifreleme açıksa çözülemez), alıcının yeni bir eşi kabul edip etmemesi, kanal eşleşmesi, üreticiye özgü yük biçimi. Cihazı açmayı veya firmware değiştirmeyi gerektirmez, ancak ek donanım (ESP32, ~birkaç yüz TL) ve radyo seviyesinde tersine mühendislik gerektirir.

@@ -18,6 +18,7 @@ import argparse
 import socket
 import struct
 import sys
+import threading
 import time
 
 QTYPES = {1: "A", 28: "AAAA", 5: "CNAME", 15: "MX", 16: "TXT", 12: "PTR", 33: "SRV", 65: "HTTPS"}
@@ -44,6 +45,21 @@ def parse_question(packet: bytes) -> tuple[str, str] | None:
         return None
 
 
+def forward(srv: socket.socket, data: bytes, addr: tuple, upstream: str) -> None:
+    """Sorguyu ust sunucuya iletir; yavas bir sorgu digerlerini bekletmesin diye ayri is parcaciginda."""
+    up = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    up.settimeout(3.0)
+    try:
+        up.sendto(data, (upstream, 53))
+        reply, _ = up.recvfrom(4096)
+        srv.sendto(reply, addr)
+    except OSError as exc:
+        # ust sunucu yanit vermedi; istemci kendi yeniden denemesini yapar
+        print(f"  ! ust sunucu hatasi: {type(exc).__name__}", flush=True)
+    finally:
+        up.close()
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--listen", default="0.0.0.0")
@@ -65,17 +81,7 @@ def main() -> None:
             q = parse_question(data)
             if q and (args.client is None or addr[0] == args.client):
                 print(f"{time.strftime('%H:%M:%S')}  {addr[0]:<15}  {q[1]:<5}  {q[0]}", flush=True)
-            up = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            up.settimeout(3.0)
-            try:
-                up.sendto(data, (args.upstream, 53))
-                reply, _ = up.recvfrom(4096)
-                srv.sendto(reply, addr)
-            except OSError as exc:
-                # ust sunucu yanit vermedi; istemci kendi yeniden denemesini yapar
-                print(f"  ! ust sunucu hatasi: {type(exc).__name__}: {exc}", flush=True)
-            finally:
-                up.close()
+            threading.Thread(target=forward, args=(srv, data, addr, args.upstream), daemon=True).start()
     except KeyboardInterrupt:
         print("\nDurduruldu.")
 
