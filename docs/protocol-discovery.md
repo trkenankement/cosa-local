@@ -46,7 +46,7 @@ Her bulguyu aşağıya `[ölçüldü]` / `[varsayım]` etiketiyle ekle. IP, MAC 
 - `[ölçüldü]` Tam TCP taraması (1–65535, zaman aşımı 1,5 sn): **açık port yok.** Ping yanıt veriyor (2–350 ms dalgalı; Wi-Fi güç tasarrufu olası). Dalgalı gecikme nedeniyle bazı bağlantı denemeleri zaman aşımına uğramış olabilir; cihazın hiç TCP servisi olmadığı **kesin kanıtlanmadı**.
 - `[ölçüldü]` Pasif mDNS dinlemesi (45 sn): sonuçsuz. Dinleyici ağdaki hiçbir cihazdan paket alamadı, bu yüzden cihazın mDNS kullanmadığı söylenemez.
 - `[varsayım]` Açık TCP portu olmaması, cihazın yalnızca dışa bağlanan bir istemci olduğuna (bulut, MQTT vb.) işaret edebilir. Doğrulama için Aşama 2 (trafik gözlemi) gerekir.
-- `[açık]` Wi-Fi'daki parçanın oda termostatı mı, alıcı ünite mi olduğu doğrulanmadı.
+- `[kullanıcı bildirimi]` Wi-Fi'ya bağlı olan parça kombiye takılı **alıcı ünite**dir (`C5KKU…`); oda termostatı Wi-Fi'ya bağlanmamıştır. Böylece taramalardaki cihaz alıcı ünitedir. Alıcı şebeke gerilimiyle sürekli beslendiği için Wi-Fi güç tasarrufu davranışı pille çalışan bir cihazdan farklı olabilir.
 - `[açık]` UDP portları taranmadı.
 
 ### Üretici belgelerinden (2026-10-08)
