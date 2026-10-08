@@ -1,0 +1,17 @@
+# Sirlar ve ev ortamina ozel veriler asla depoya girmez
+.env
+*.env
+secrets.yaml
+
+# Trafik kayitlari ve tarama ciktilari MAC, IP, token ve ev aliskanliklari icerebilir
+captures/
+*.pcap
+*.pcapng
+*.har
+scan-results/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
