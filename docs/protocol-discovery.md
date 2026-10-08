@@ -88,3 +88,11 @@ Kaynaklar: Nuvia `Cosa_v5_Installation_User_Manual.pdf` ve `Cosa_Product_Docs_v5
 #### Olası yerel yol: ESP-NOW ile eşler arası haberleşme
 
 Alıcı ünite termostatla ESP-NOW ile konuşuyorsa, bu konuşma Wi-Fi/bulut gerektirmez. Başka bir ESP32 aynı protokolle (a) trafiği dinleyip biçimi çözebilir, (b) alıcıya eş olarak komut gönderebilir. ESPHome 2025.8'den beri bir `espnow` bileşeni sunar. **Engeller:** şifreleme (ESP-NOW şifreleme açıksa çözülemez), alıcının yeni bir eşi kabul edip etmemesi, kanal eşleşmesi, üreticiye özgü yük biçimi. Cihazı açmayı veya firmware değiştirmeyi gerektirmez, ancak ek donanım (ESP32, ~birkaç yüz TL) ve radyo seviyesinde tersine mühendislik gerektirir.
+
+#### Mobil uygulama ve yöntem notları (2026-10-08)
+
+- `[belgeli: mağaza sayfaları]` Uygulama `com.nuvia.cosa` (Android 5.105.0, 29 Eyl 2026, ~61 MB) ve iOS 5.106.0. Mağaza gizlilik beyanı: kesin/yaklaşık konum (uygulama açık olmasa da kullanılabilir), e-posta, çökme tanılaması. Android izinleri, kullanılan çatı (Flutter/RN/yerel) ve cihaz kurulum yöntemi (BLE/SoftAP/QR) **bulunamadı**; Exodus/APKCombo/AppBrain erişilemedi.
+- `[karar]` APK, üçüncü taraf yansı sitelerinden indirilmedi (güvenilmeyen kaynak). Uygulama bulut API'sine konuşur; cihaz protokolünü içermesi beklenmez. Yalnızca kurulum (provisioning) akışını gösterebilir.
+- `[ölçüldü]` Test PC'sinin Wi-Fi kartı (Intel AX201) klasik "barındırılan ağ"ı desteklemiyor. Windows Mobil Hotspot ayrı bir özellik; cihazın 2.4 GHz'e katılabilmesi için PC'nin ana ağa da 2.4 GHz'den bağlı olması gerekir.
+- `[belgeli/çıkarım]` SONOFF Dongle-M 802.15.4 (Zigbee/Thread/Matter) radyosudur; Cosa'nın ESP32 Wi-Fi/ESP-NOW (802.11) trafiğini alamaz.
+
