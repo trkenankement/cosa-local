@@ -64,3 +64,13 @@ Kaynaklar: Nuvia `Cosa_v5_Installation_User_Manual.pdf` ve `Cosa_Product_Docs_v5
 - `[varsayım]` Termostat ile alıcı arasındaki bağlantı, Wi-Fi'ya girmeyen 2.4 GHz özel bir radyo protokolü olabilir (çip ailesi ESP olduğu için ESP-NOW gibi bir şey olası). Doğrulanmadı.
 - `[çıkarım]` Mimari bulut öncelikli: cihaz buluta bağlanıyor, uygulama da buluta bağlanıyor; açık yerel TCP portu olmaması bununla uyumlu.
 
+### Topluluk projeleri (2026-10-08)
+
+İncelenen açık kaynak projeler: `aykutvr/smartcosa-home-assistant-integration` (MIT), `ahamitd/cosa-homeassistant` (MIT), `kutsan/homebridge-cosa`. Kod kopyalanmadı; yalnızca mimari ipucu için okundu.
+
+- `[ölçüldü: kod okundu]` Üçü de **bulut tabanlı**: Cosa hesabı e-postası/parolası ile giriş, `authToken` başlığı, `kiwi.cosa.com.tr` ve `kiwi-api.nuvia.com.tr` üzerinden HTTPS isteği. Hiçbirinde yerel IP, MQTT, Bluetooth veya cihaz protokolü yok.
+- `[ölçüldü]` Bulutun cihaz için sunduğu alanlar (uygulama tarafı): sıcaklık, nem, mod/seçenek, pil seviyesi (termostat), Wi-Fi RSSI, firmware sürümü, kombi durumu, çocuk kilidi, kalibrasyon. Bu, cihazın buluta bu bilgileri gönderdiğini gösterir.
+- `[ölçüldü]` `ahamitd` kodunda "WebSocket problemi çözülünce eklenecek" notu var: bulutta uygulamaya anlık veri için bir WebSocket kanalı olduğu anlaşılıyor (uygulama↔bulut; cihaz↔bulut kanalı değil).
+- `[belgeli]` Üretici, Home Assistant'ı desteklemeyi düşünmediğini belirtmiş (HA Topluluğu, 2023).
+- `[açık]` Cihaz↔bulut protokolü (alıcı ünite buluta nasıl bağlanıyor) hiçbir kaynakta yok. Cevap yalnızca ağ trafiği gözleminden gelecek.
+- `[açık]` Reddit'te konuyla ilgili bir kaynak bulunamadı (arama motoru ve tarayıcıda reddit.com engelli, doğrulanamadı).
