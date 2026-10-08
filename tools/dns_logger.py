@@ -58,7 +58,10 @@ def main() -> None:
 
     try:
         while True:
-            data, addr = srv.recvfrom(4096)
+            try:
+                data, addr = srv.recvfrom(4096)
+            except ConnectionResetError:
+                continue  # Windows: onceki cevaba ICMP "port ulasilamaz" dondu; yoksay
             q = parse_question(data)
             if q and (args.client is None or addr[0] == args.client):
                 print(f"{time.strftime('%H:%M:%S')}  {addr[0]:<15}  {q[1]:<5}  {q[0]}", flush=True)
@@ -68,8 +71,9 @@ def main() -> None:
                 up.sendto(data, (args.upstream, 53))
                 reply, _ = up.recvfrom(4096)
                 srv.sendto(reply, addr)
-            except OSError:
-                pass  # ust sunucu yanit vermedi; istemci kendi yeniden denemesini yapar
+            except OSError as exc:
+                # ust sunucu yanit vermedi; istemci kendi yeniden denemesini yapar
+                print(f"  ! ust sunucu hatasi: {type(exc).__name__}: {exc}", flush=True)
             finally:
                 up.close()
     except KeyboardInterrupt:
