@@ -74,3 +74,6 @@ Kaynaklar: Nuvia `Cosa_v5_Installation_User_Manual.pdf` ve `Cosa_Product_Docs_v5
 - `[belgeli]` Üretici, Home Assistant'ı desteklemeyi düşünmediğini belirtmiş (HA Topluluğu, 2023).
 - `[açık]` Cihaz↔bulut protokolü (alıcı ünite buluta nasıl bağlanıyor) hiçbir kaynakta yok. Cevap yalnızca ağ trafiği gözleminden gelecek.
 - `[açık]` Reddit'te konuyla ilgili bir kaynak bulunamadı (arama motoru ve tarayıcıda reddit.com engelli, doğrulanamadı).
+- `[ölçüldü: kullanıcı ekran görüntüsü]` Telefondaki Cosa uygulaması (telefonun kendi DNS günlüğü, LTE üzerinden) `kiwi-api.nuvia.com.tr` adresini sorguluyor; adres AWS eu-west-1 (İrlanda) yük dengeleyicisine CNAME veriyor. Bu **uygulama↔bulut** trafiğidir, cihazınki değil.
+- `[ölçüldü]` TP-Link AX12 sistem günlüğü yalnızca servis olaylarını (NAT, QoS, PPP vb.) içerir; **DNS sorgusu veya cihaz bazlı bağlantı kaydı yok.** Router üzerinden cihaz trafiği gözlemlenemez.
+
