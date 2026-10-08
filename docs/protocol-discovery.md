@@ -40,4 +40,11 @@ Cihazı açmak, firmware yazmak 230V alıcı ünitede **önerilmez** ([SECURITY.
 
 Her bulguyu aşağıya `[ölçüldü]` / `[varsayım]` etiketiyle ekle. IP, MAC ve seri numarası **yazma**.
 
-- _(henüz bulgu yok)_
+### 2026-10-08
+
+- `[ölçüldü]` Wi-Fi'daki Cosa cihazının MAC ön eki Espressif Inc. adına kayıtlı (ESP32/ESP8266 ailesi ipucu; model kanıtı değil).
+- `[ölçüldü]` Tam TCP taraması (1–65535, zaman aşımı 1,5 sn): **açık port yok.** Ping yanıt veriyor (2–350 ms dalgalı; Wi-Fi güç tasarrufu olası). Dalgalı gecikme nedeniyle bazı bağlantı denemeleri zaman aşımına uğramış olabilir; cihazın hiç TCP servisi olmadığı **kesin kanıtlanmadı**.
+- `[ölçüldü]` Pasif mDNS dinlemesi (45 sn): sonuçsuz. Dinleyici ağdaki hiçbir cihazdan paket alamadı, bu yüzden cihazın mDNS kullanmadığı söylenemez.
+- `[varsayım]` Açık TCP portu olmaması, cihazın yalnızca dışa bağlanan bir istemci olduğuna (bulut, MQTT vb.) işaret edebilir. Doğrulama için Aşama 2 (trafik gözlemi) gerekir.
+- `[açık]` Wi-Fi'daki parçanın oda termostatı mı, alıcı ünite mi olduğu doğrulanmadı.
+- `[açık]` UDP portları taranmadı.
