@@ -48,3 +48,19 @@ Her bulguyu aşağıya `[ölçüldü]` / `[varsayım]` etiketiyle ekle. IP, MAC 
 - `[varsayım]` Açık TCP portu olmaması, cihazın yalnızca dışa bağlanan bir istemci olduğuna (bulut, MQTT vb.) işaret edebilir. Doğrulama için Aşama 2 (trafik gözlemi) gerekir.
 - `[açık]` Wi-Fi'daki parçanın oda termostatı mı, alıcı ünite mi olduğu doğrulanmadı.
 - `[açık]` UDP portları taranmadı.
+
+### Üretici belgelerinden (2026-10-08)
+
+Kaynaklar: Nuvia `Cosa_v5_Installation_User_Manual.pdf` ve `Cosa_Product_Docs_v5.pdf` (resmî dosya sunucusu; telif nedeniyle depoya konmadı).
+
+- `[belgeli]` Alıcı ünite model ailesi **C5KKU…** (ör. `C5KKU1-230V`), oda termostatı ailesi **C5CTU…**.
+- `[belgeli]` **Her iki cihaz da 2.4 GHz bandında kablosuz haberleşir** ve verileri "bulut tabanlı sistemle veya eşleştirilmiş diğer cihazlarla" paylaşır.
+- `[belgeli]` İnternet bağlantısını **ya alıcı ünite ya da termostat** kurar. Alıcı ünite uzaksa termostat (adaptörle beslenirse) Wi-Fi'ya bağlanabilir; uygulamada "Reset Device → Continue Installation" ile. Yani Wi-Fi'daki cihazın hangisi olduğu kuruluma bağlıdır.
+- `[belgeli]` Wi-Fi: yalnızca 2.4 GHz; WPA/WPA2/WPA+WPA2. Alıcıda "Wifi" düğmesi (uzun basış) bağlantı kurulumunu hazırlar; kurulum Cosa mobil uygulamasıyla adım adım yapılır.
+- `[belgeli]` Termostat ↔ alıcı eşleşmesi ayrı bir mekanizmadır ("zincir" simgeli Pair düğmesi; termostatta P09). Cihazlar fabrikada eşleşmiş gelir; eşleşme 1 dakika içinde tamamlanmazsa moddan çıkar.
+- `[belgeli]` Alıcı ünite LED'i "Uzaktan yazılım güncellemesi" durumunu gösterir: cihaz **buluttan OTA güncelleme** alıyor.
+- `[belgeli]` Mobil uygulama: bulut hesabı gerektirir ("Cosa should be connected to a Wi-Fi network to be controlled from mobile phones"). Yerel kontrol, çevrimdışı mod veya API belgelenmemiş.
+- `[belgeli]` Uygunluk beyanı RED, EN 300 328 (2.4 GHz) ve EN 300 220 (sub-GHz SRD) standartlarını sayıyor. EN 300 220'nin cihaza özgü ikinci bir sub-GHz radyoyu gösterip göstermediği **belirsiz**.
+- `[varsayım]` Termostat ile alıcı arasındaki bağlantı, Wi-Fi'ya girmeyen 2.4 GHz özel bir radyo protokolü olabilir (çip ailesi ESP olduğu için ESP-NOW gibi bir şey olası). Doğrulanmadı.
+- `[çıkarım]` Mimari bulut öncelikli: cihaz buluta bağlanıyor, uygulama da buluta bağlanıyor; açık yerel TCP portu olmaması bununla uyumlu.
+

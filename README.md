@@ -27,7 +27,7 @@ Yerel protokol yoksa 2–4. adımlar yapılmaz; sonuç belgelenir.
 
 ## Kapsam
 
-Hedef donanım: Cosa v5 sıcaklık/oda termostatı ve "Wireless Heater Control Unit v5" alıcı ünitesi. Cihazın hangi parçasının Wi-Fi'ya bağlandığı ve iki parça arasındaki radyo bağlantısının türü henüz doğrulanmadı.
+Hedef donanım: Cosa v5 oda termostatı (`C5CTU…`) ve "Wireless Heater Control Unit v5" alıcı ünitesi (`C5KKU…`). Üretici belgelerine göre iki cihaz da 2.4 GHz Wi-Fi ile buluta bağlanabilir ve birbirleriyle ayrı bir 2.4 GHz bağlantıyla eşleşir; hangisinin Wi-Fi'da olduğu kuruluma bağlıdır. Ayrıntılar: [docs/protocol-discovery.md](docs/protocol-discovery.md).
 
 ## Kaynaklar ve teşekkür
 
