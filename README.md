@@ -16,6 +16,18 @@ Cosa akıllı termostat (v5) için **bulutsuz, yerel ağda çalışan** Home Ass
 
 Ayrıntı: [SECURITY.md](SECURITY.md).
 
+## Keşif araçları ve kontroller
+
+DNS aracı varsayılan olarak en fazla 32 sorguyu eşzamanlı işler ve 128 sorguyu kuyrukta tutar. `--workers` ile çalışan sayısı, `--queue-size` ile kuyruk sınırı değiştirilebilir. İkisi de doluysa yeni paket düşürülür; istemcinin yeniden denemesi beklenir. `--client` yalnız günlük filtresidir; diğer istemcilerin sorguları da bu ortak sınıra tabidir.
+
+Port taramasında `--concurrency` en az 1, `--timeout` sonlu ve sıfırdan büyük olmalıdır. Geçersiz değerler bağlantı açılmadan reddedilir.
+
+Cihaza trafik göndermeyen birim testleri:
+
+```sh
+python -m unittest discover -s tests -v
+```
+
 ## Yol haritası
 
 1. [ ] Cihazın yerel ağdaki davranışını belirle ([docs/protocol-discovery.md](docs/protocol-discovery.md)).

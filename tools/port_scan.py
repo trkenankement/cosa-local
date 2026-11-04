@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import ipaddress
+import math
 import sys
 
 
@@ -41,6 +42,10 @@ async def _probe(host: str, port: int, timeout: float, sem: asyncio.Semaphore) -
 
 
 async def scan(host: str, start: int, end: int, timeout: float, concurrency: int) -> list[int]:
+    if concurrency < 1:
+        raise ValueError("concurrency must be at least 1")
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("timeout must be finite and positive")
     sem = asyncio.Semaphore(concurrency)
     results = await asyncio.gather(
         *(_probe(host, p, timeout, sem) for p in range(start, end + 1))
@@ -59,6 +64,10 @@ def main() -> None:
 
     if not (1 <= args.start <= args.end <= 65535):
         sys.exit("Hata: port araligi 1-65535 icinde olmali.")
+    if args.concurrency < 1:
+        parser.error("--concurrency en az 1 olmali")
+    if not math.isfinite(args.timeout) or args.timeout <= 0:
+        parser.error("--timeout sonlu ve sifirdan buyuk olmali")
     _require_private(args.host)
 
     open_ports = asyncio.run(
