@@ -22,6 +22,14 @@ DNS aracı varsayılan olarak en fazla 32 sorguyu eşzamanlı işler ve 128 sorg
 
 Port taramasında `--concurrency` en az 1, `--timeout` sonlu ve sıfırdan büyük olmalıdır. Geçersiz değerler bağlantı açılmadan reddedilir.
 
+`tools/udp_discovery.py`, tek bir RFC1918 IPv4 cihazına CoAP kaynak keşfi ve mDNS servis keşfi için birer **salt okunur unicast** UDP paketi gönderir. Isıtma komutu, bulut bağlantısı, multicast, yeniden deneme veya ham yanıt kaydı yoktur. Her sorgu en fazla 5 saniye ve 8 yanıtla sınırlıdır; varsayılan süre 2 saniyedir. Adres komut satırından verilir, çıktıya yazılmaz:
+
+```sh
+python -I tools/udp_discovery.py <cihaz-ip-adresi>
+```
+
+Yanıt alınmaması yerel protokol olmadığını kanıtlamaz. Araç genel bir UDP port tarayıcısı değildir; yalnızca 5683 ve 5353 portlarını sorgular.
+
 Cihaza trafik göndermeyen birim testleri:
 
 ```sh
