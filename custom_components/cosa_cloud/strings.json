@@ -1,0 +1,73 @@
+{
+  "title": "Cosa Cloud",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Cosa Cloud",
+        "description": "Uses the Cosa/Nuvia internet service. Your credentials are stored in Home Assistant. Setup does not change the heating settings.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      },
+      "device": {
+        "title": "Choose thermostat",
+        "data": {
+          "endpoint_id": "Thermostat"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in to Cosa again",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid Cosa credentials",
+      "cannot_connect": "Cannot connect to Cosa",
+      "no_devices": "No thermostats found",
+      "wrong_account": "This account does not contain the configured thermostat"
+    },
+    "abort": {
+      "already_configured": "This thermostat is already configured",
+      "reauth_successful": "Authentication updated",
+      "no_devices": "No matching thermostat found"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperature"
+      },
+      "humidity": {
+        "name": "Humidity"
+      }
+    },
+    "binary_sensor": {
+      "connection": {
+        "name": "Connection"
+      },
+      "heating": {
+        "name": "Heating"
+      }
+    },
+    "climate": {
+      "thermostat": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "home": "Home",
+              "away": "Away",
+              "sleep": "Sleep",
+              "manual": "Manual",
+              "automatic": "Automatic",
+              "schedule": "Schedule"
+            }
+          }
+        }
+      }
+    }
+  }
+}

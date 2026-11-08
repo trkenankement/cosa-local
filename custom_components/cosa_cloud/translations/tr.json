@@ -1,0 +1,73 @@
+{
+  "title": "Cosa Cloud",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cosa bulut hesabını bağla",
+        "description": "Cosa/Nuvia internet hizmetini kullanır. Hesap bilgileri Home Assistant içinde saklanır. Kurulum ısıtma ayarını değiştirmez.",
+        "data": {
+          "email": "E-posta",
+          "password": "Parola"
+        }
+      },
+      "device": {
+        "title": "Termostat seç",
+        "data": {
+          "endpoint_id": "Termostat"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Cosa hesabına yeniden giriş yap",
+        "data": {
+          "email": "E-posta",
+          "password": "Parola"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Cosa hesap bilgileri doğrulanamadı",
+      "cannot_connect": "Cosa hizmetine bağlanılamadı",
+      "no_devices": "Hesapta termostat bulunamadı",
+      "wrong_account": "Bu hesap yapılandırılmış termostatı içermiyor"
+    },
+    "abort": {
+      "already_configured": "Bu termostat zaten ekli",
+      "reauth_successful": "Hesap bilgileri güncellendi",
+      "no_devices": "Eşleşen termostat bulunamadı"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Sıcaklık"
+      },
+      "humidity": {
+        "name": "Nem"
+      }
+    },
+    "binary_sensor": {
+      "connection": {
+        "name": "Bağlantı"
+      },
+      "heating": {
+        "name": "Isıtma"
+      }
+    },
+    "climate": {
+      "thermostat": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "home": "Evde",
+              "away": "Dışarı",
+              "sleep": "Uyku",
+              "manual": "Manuel",
+              "automatic": "Otomatik",
+              "schedule": "Haftalık program"
+            }
+          }
+        }
+      }
+    }
+  }
+}
