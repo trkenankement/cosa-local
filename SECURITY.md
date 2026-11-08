@@ -1,6 +1,18 @@
 # Güvenlik ve Gizlilik İlkeleri
 
-Bu proje "gizlilik önce" tasarlanmıştır. Aşağıdakiler hedef değil, **kabul koşuludur**; bir değişiklik bunları bozuyorsa birleştirilmez.
+Bu depo iki ayrı çalışma içerir: yerel protokol araştırması ve kullanıcının açık talebiyle eklenen `cosa_cloud` bulut entegrasyonu. Bulut bağımlılığı adında, manifestinde ve kurulum ekranında belirtilmelidir.
+
+## Cosa Cloud kapsamı
+
+- Yalnızca `https://kiwi-api.nuvia.com.tr` Cosa/Nuvia API'siyle iletişim kurulur; HTTPS doğrulaması açık, HTTP yönlendirmeleri kapalıdır.
+- Cosa hesabı kullanıcı tarafından HA ekranına girilir ve HA'nın yapılandırma depolamasında saklanır. Belirteç bellekte tutulur. Hesap bilgileri, cihaz yanıtları veya özel ağ bilgileri depoya, tanılama çıktısına ve günlüklere yazılmaz.
+- Ağ kopması başarı gibi gösterilmez. Eksik sıcaklıklar için varsayılan değerle ısıtma komutu üretilmez. Yazma istekleri otomatik tekrarlanmaz.
+- Her kurulum yalnız seçilen termostatı yönetir. Başlangıçta, yeniden bağlantıda ve periyodik sorgularda ısıtma komutu gönderilmez.
+- Yalnız hedef sıcaklık ve mod kontrolü sunulur; firmware, eşleştirme, kombi PID ayarı veya kalibrasyon değiştirilmez.
+
+## Yerel araştırma kapsamı
+
+Aşağıdaki yerel çalışma koşulları bulut entegrasyonunu kapsamaz:
 
 1. **Dışarıya çıkış yok.** Entegrasyon yalnızca kullanıcının yapılandırdığı yerel ağ adresiyle konuşur. Kodda sabit bir bulut adresi, telemetri, analitik veya güncelleme sorgusu bulunmaz.
 2. **Hesap bilgisi yok.** Yerel kontrol bulut hesabı gerektirmez; e-posta, parola veya bulut belirteci istenmez ve saklanmaz.

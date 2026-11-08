@@ -1,13 +1,37 @@
 # cosa-local
 
-Cosa akıllı termostat (v5) için **bulutsuz, yerel ağda çalışan** Home Assistant entegrasyonu girişimi.
+Cosa akıllı termostat için Home Assistant çalışmaları: **Cosa Cloud** bulut entegrasyonu ve ayrı yerel protokol araştırması.
 
-> **Durum: araştırma aşaması, henüz çalışan bir entegrasyon yok.**
-> Cihazın yerel bir protokol sunup sunmadığı kanıtlanmadı. Bu depo şu an keşif araçlarını, gizlilik ilkelerini ve yol haritasını içerir. Yerel yol bulunamazsa bunu açıkça yazacağız; bulut tabanlı bir "yerel" taklit sunmayacağız.
+> `custom_components/cosa_cloud` internet üzerinden Cosa/Nuvia hizmetini kullanır. **Yerel veya bulutsuz değildir.** Yerel protokol araştırmasında henüz çalışan bir kontrol yolu bulunmadı.
 
-*English: an early-stage effort to build a cloud-free, LAN-only Home Assistant integration for the Cosa smart thermostat (v5). No working integration yet; local-protocol discovery comes first.*
+## Cosa Cloud
 
-## Hedefler
+Kendi hesabımızda bakımı yapılan `cosa_cloud` entegrasyonu; Home Assistant **2026.11.0 veya üzeri** için hazırlanmıştır. İlk sürümün otomatik testleri sentetik veriler kullanır; gerçek cihaz doğrulaması ayrıca yapılır.
+
+- Sıcaklık, nem, bağlantı ve gerçek kombi çalışma bilgisi.
+- Hedef sıcaklık, Evde/Uyku/Dışarı/Manuel/Otomatik/Haftalık program seçimi.
+- 60 saniyede bir tek cihaz sorgusu; kurulum ve sorgulama ısıtma ayarlarını değiştirmez.
+- Sıcaklık değiştirirken Evde/Uyku/Dışarı değerleri cihazdan yeniden okunur ve korunur; yeni değer Manuel profile uygulanır. Eksik profil verisiyle yazma yapılmaz.
+- Kapalı komutu Cosa'nın **donma koruması** profilidir; elektriksel izolasyon anlamına gelmez.
+- Başarısız yazmalar otomatik tekrarlanmaz. Durum buluttan yeniden okunur; komut başarılı görünmesi için tahmini değer üretilmez.
+- Hesap bilgileri HA yapılandırmasında saklanır; bu deponun veya GitHub'ın parolaya ihtiyacı yoktur. HAM yanıtlar ve kimlik bilgileri günlüğe yazılmaz.
+
+Kurulum: `custom_components/cosa_cloud` klasörünü HA `config/custom_components/` altına koy, HA'yı yeniden başlat, **Ayarlar → Cihazlar ve hizmetler → Entegrasyon ekle → Cosa Cloud** ekranından hesabını bağla. Geri almak için entegrasyonu kaldırıp bileşen klasörünü yedek konuma taşı ve HA'yı yeniden başlat.
+
+Bu sürüm için Nuvia'nın HTTPS API alanları topluluk projesi [ahamitd/cosa-homeassistant](https://github.com/ahamitd/cosa-homeassistant) incelenerek öğrenildi. İstemci, yapılandırma akışı ve varlıklar bu depo için yeniden yazıldı. Cosa/Nuvia ile resmî bağlantımız yoktur.
+
+Testler:
+
+```sh
+python -m pip install homeassistant==2026.11.0
+python -m unittest discover -s tests -v
+```
+
+## Yerel protokol araştırması
+
+*The local-protocol research is still experimental. The separately named Cosa Cloud integration requires internet access and a Cosa account.*
+
+### Yerel araştırmanın hedefleri
 
 - Cihaz internete çıkmadan Home Assistant ile çalışmak (`iot_class: local_polling` veya `local_push`).
 - Bulut hesabı, parola veya belirteç gerektirmemek ve saklamamak.
