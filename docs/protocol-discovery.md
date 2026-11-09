@@ -100,7 +100,7 @@ Alıcı ünite termostatla ESP-NOW ile konuşuyorsa, bu konuşma Wi-Fi/bulut ger
 
 - `[ölçüldü]` `tools/udp_discovery.py` ile alıcıya birer CoAP `GET /.well-known/core` (UDP 5683) ve mDNS PTR servis keşfi (UDP 5353) unicast sorgusu gönderildi. Her iki sorgu da işletim sisteminden `ECONNREFUSED` (111) aldı; uygulama yanıtı alınmadı. Bu sonuç yalnızca bu iki uç nokta ve test anı için geçerlidir. Özel UDP protokolü veya yalnızca multicast yanıtlayan bir servis dışlanmadı.
 - `[ölçüldü]` Mevcut Linux bilgisayarda tek Wi-Fi radyosu, 5 GHz üzerinde etkin bağlantı ve kablosu bağlı olmayan Ethernet var. İkinci USB Wi-Fi/ESP32 aygıtı görünmedi. Tek radyoyu 2.4 GHz dinlemeye geçirmek mevcut bağlantıyı kesebilir; bu değişiklik yapılmadı.
-- `[karar]` Bulut entegrasyonu kurulmadı. Hesap bilgisi istenmedi ve cihaz ayarları değiştirilmedi. Depoda henüz çalışan `climate` entegrasyonu yok; yalnızca keşif araçları var.
+- `[karar: UDP keşfi anındaki durum]` Bu keşif sırasında bulut entegrasyonu kurulmadı, hesap bilgisi istenmedi ve cihaz ayarları değiştirilmedi. Aynı gün daha sonra PR #2 ile ayrı `cosa_cloud` entegrasyonu eklendi; güncel kurulum bilgisi README'dedir.
 - `[açık]` Sonraki anlamlı adım: ayrı bir 2.4 GHz radyo ile pasif gözlem veya cihaz trafiğinin görülebildiği kontrollü bir ağ geçidi. ESP-NOW olasılığı araştırılabilir, ancak bu modelde kullanıldığı ve şifresiz olduğu henüz kanıtlanmadı. Donanım bulunması tek başına kontrolün mümkün olacağını garanti etmez.
 
 Sorgu biçimleri: [CoAP, RFC 7252](https://www.rfc-editor.org/rfc/rfc7252), [mDNS, RFC 6762](https://www.rfc-editor.org/rfc/rfc6762), [DNS-SD servis keşfi, RFC 6763 §9](https://www.rfc-editor.org/rfc/rfc6763#section-9).

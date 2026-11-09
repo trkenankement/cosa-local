@@ -5,7 +5,7 @@ doner. Yalnizca (istemci IP, sorgu adi, tur) terminale yazilir; dosyaya kaydedil
 Cevaplar degistirilmez, engelleme yapilmaz.
 
 Yalnizca KENDI aginda, gecici olarak kullan. Ornek:
-    python -I tools/dns_logger.py --client 192.168.0.125
+    python -I tools/dns_logger.py --listen 192.168.0.10 --client 192.168.0.125
     python -I tools/dns_logger.py --port 5353          # yerel test
 
 Not: 53. port icin Windows guvenlik duvari izin sorabilir.
@@ -63,8 +63,15 @@ def parse_question(packet: bytes) -> tuple[str, str] | None:
                 break
             if n & 0xC0:  # sorguda sikistirma beklenmez
                 return None
-            labels.append(packet[i + 1 : i + 1 + n].decode("ascii", "replace"))
+            label = packet[i + 1 : i + 1 + n]
+            if len(label) != n or any(c < 33 or c > 126 for c in label):
+                return None  # Do not print terminal controls or binary labels.
+            labels.append(label.decode("ascii"))
             i += 1 + n
+            if i - 12 > 254:
+                return None
+        if len(packet) < i + 4:
+            return None
         qtype = struct.unpack("!H", packet[i : i + 2])[0]
         return ".".join(labels), QTYPES.get(qtype, str(qtype))
     except (IndexError, struct.error):
@@ -76,9 +83,12 @@ def forward(srv: socket.socket, data: bytes, addr: tuple, upstream: str) -> None
     up = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     up.settimeout(3.0)
     try:
-        up.sendto(data, (upstream, 53))
-        reply, _ = up.recvfrom(4096)
-        srv.sendto(reply, addr)
+        # Connected UDP rejects packets from a different source address/port.
+        up.connect((upstream, 53))
+        up.send(data)
+        reply = up.recv(4096)
+        if len(data) >= 12 and len(reply) >= 12 and reply[:2] == data[:2] and reply[2] & 0x80:
+            srv.sendto(reply, addr)
     except OSError as exc:
         # ust sunucu yanit vermedi; istemci kendi yeniden denemesini yapar
         print(f"  ! ust sunucu hatasi: {type(exc).__name__}", flush=True)
@@ -88,7 +98,7 @@ def forward(srv: socket.socket, data: bytes, addr: tuple, upstream: str) -> None
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--listen", default="0.0.0.0")
+    ap.add_argument("--listen", default="127.0.0.1", help="LAN kullanimi icin yerel ag IP'sini acikca belirt")
     ap.add_argument("--port", type=int, default=53)
     ap.add_argument("--upstream", default="192.168.0.1", help="sorgularin iletilecegi DNS (varsayilan: router)")
     ap.add_argument("--client", help="yalnizca bu istemci IP'sinin sorgularini yazdir (digerleri yine iletilir)")

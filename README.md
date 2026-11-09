@@ -13,6 +13,9 @@ Kendi hesabımızda bakımı yapılan `cosa_cloud` entegrasyonu; Home Assistant 
 - 60 saniyede bir tek cihaz sorgusu; kurulum ve sorgulama ısıtma ayarlarını değiştirmez.
 - Sıcaklık değiştirirken Evde/Uyku/Dışarı değerleri cihazdan yeniden okunur ve korunur; yeni değer Manuel profile uygulanır. Eksik profil verisiyle yazma yapılmaz.
 - Kapalı komutu Cosa'nın **donma koruması** profilidir; elektriksel izolasyon anlamına gelmez.
+- Aç komutu, cihaz zaten açıksa mevcut profili değiştirmez. Donma korumasındayken aynı entegrasyon oturumunda cihazdan gözlemlenen son Evde/Uyku/Dışarı/Manuel/Otomatik/Haftalık program seçimine döner. Otomatik ve Haftalık program yeniden etkinleştirilir; programın o andaki hedefini Cosa belirler.
+- Önceki profil bilinmiyorsa (örneğin HA donma korumasındayken yeniden başlatılmışsa) Aç komutu hata verir ve hiçbir mod yazmaz. İstenen profili açıkça seçin. Son profil diske kaydedilmez; yeniden başlatma hiçbir zaman kendi başına ısıtmayı açmaz. Gözlemlenmeyen mobil uygulama değişiklikleri geri dönüş belleğine yansımaz.
+- Evde profilini özellikle isteyen otomasyonlar `climate.set_preset_mode` ile `home` seçmelidir. `climate.turn_on` ve `climate.set_hvac_mode: heat` aynı profil koruma davranışını kullanır.
 - Başarısız yazmalar otomatik tekrarlanmaz. Durum buluttan yeniden okunur; komut başarılı görünmesi için tahmini değer üretilmez.
 - Hesap bilgileri HA yapılandırmasında saklanır; bu deponun veya GitHub'ın parolaya ihtiyacı yoktur. HAM yanıtlar ve kimlik bilgileri günlüğe yazılmaz.
 
@@ -24,7 +27,7 @@ Testler:
 
 ```sh
 python -m pip install homeassistant==2026.11.0
-python -m unittest discover -s tests -v
+python tests/run_offline.py
 ```
 
 ## Yerel protokol araştırması
@@ -44,6 +47,8 @@ Ayrıntı: [SECURITY.md](SECURITY.md).
 
 DNS aracı varsayılan olarak en fazla 32 sorguyu eşzamanlı işler ve 128 sorguyu kuyrukta tutar. `--workers` ile çalışan sayısı, `--queue-size` ile kuyruk sınırı değiştirilebilir. İkisi de doluysa yeni paket düşürülür; istemcinin yeniden denemesi beklenir. `--client` yalnız günlük filtresidir; diğer istemcilerin sorguları da bu ortak sınıra tabidir.
 
+DNS aracı varsayılan olarak yalnız `127.0.0.1` üzerinde dinler. Yerel ağdaki kendi cihazınızdan sorgu alabilmesi için `--listen <bilgisayarın-yerel-IP-adresi>` seçeneğini açıkça verin. İstemci IP'si ve sorgulanan ad terminalde gösterilir; bu çıktıyı paylaşmayın. Üst sunucu yanıtlarının kaynak adresi, işlem kimliği ve yanıt biti denetlenir.
+
 Port taramasında `--concurrency` en az 1, `--timeout` sonlu ve sıfırdan büyük olmalıdır. Geçersiz değerler bağlantı açılmadan reddedilir.
 
 `tools/udp_discovery.py`, tek bir RFC1918 IPv4 cihazına CoAP kaynak keşfi ve mDNS servis keşfi için birer **salt okunur unicast** UDP paketi gönderir. Isıtma komutu, bulut bağlantısı, multicast, yeniden deneme veya ham yanıt kaydı yoktur. Her sorgu en fazla 5 saniye ve 8 yanıtla sınırlıdır; varsayılan süre 2 saniyedir. Adres komut satırından verilir, çıktıya yazılmaz:
@@ -57,7 +62,7 @@ Yanıt alınmaması yerel protokol olmadığını kanıtlamaz. Araç genel bir U
 Cihaza trafik göndermeyen birim testleri:
 
 ```sh
-python -m unittest discover -s tests -v
+python tests/run_offline.py
 ```
 
 ## Yol haritası

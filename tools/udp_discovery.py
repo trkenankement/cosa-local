@@ -53,8 +53,10 @@ def summarize(protocol: str, data: bytes, message_id: int, token: bytes) -> dict
         if tkl > 8 or len(data) < 4 + tkl:
             return None
         # Responses correlate by token; an empty Reset correlates by message ID.
-        if data[0] == 0x70 and data[1] == 0 and int.from_bytes(data[2:4], "big") == message_id:
+        if len(data) == 4 and data[0] == 0x70 and data[1] == 0 and int.from_bytes(data[2:4], "big") == message_id:
             return {"status": "reset", "bytes": len(data)}
+        if (data[0] >> 4) & 3 == 3:
+            return None  # A Reset cannot carry a response code or payload.
         if tkl != len(token) or data[4:4+tkl] != token or data[1] >> 5 not in (2, 4, 5):
             return None
         return {"status": "response", "code": f"{data[1] >> 5}.{data[1] & 31:02}",
