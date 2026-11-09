@@ -79,7 +79,7 @@ class CosaClimate(CosaEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode):
         if hvac_mode not in self.hvac_modes:
             raise HomeAssistantError("Unsupported HVAC mode")
-        await self.coordinator.async_control("set_mode", "manual", "frozen" if hvac_mode == HVACMode.OFF else "home")
+        await self.coordinator.async_control("set_enabled", hvac_mode == HVACMode.HEAT)
 
     async def async_set_preset_mode(self, preset_mode):
         if preset_mode in PRESETS:

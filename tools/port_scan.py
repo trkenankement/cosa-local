@@ -7,7 +7,7 @@ Kullanim:
     python -I tools/port_scan.py <ana-makine> [--start 1] [--end 65535]
                                  [--timeout 1.0] [--concurrency 200]
 
-Yalnizca ozel (RFC 1918) ve link-local adreslere izin verilir.
+Yalnizca RFC 1918, IPv6 ULA, link-local ve loopback adreslere izin verilir.
 """
 from __future__ import annotations
 
@@ -22,9 +22,11 @@ def _require_private(host: str) -> None:
     try:
         addr = ipaddress.ip_address(host)
     except ValueError:
-        sys.exit("Hata: ana makine bir IP adresi olmali (ornek: 192.168.x.y).")
-    if not (addr.is_private or addr.is_link_local):
-        sys.exit("Hata: yalnizca ozel/yerel ag adreslerine izin verilir.")
+        raise ValueError("ana makine bir IP adresi olmali") from None
+    networks = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7")
+    if not (addr.is_loopback or addr.is_link_local or
+            any(addr in ipaddress.ip_network(net) for net in networks)):
+        raise ValueError("yalnizca ozel/yerel ag adreslerine izin verilir")
 
 
 async def _probe(host: str, port: int, timeout: float, sem: asyncio.Semaphore) -> int | None:
@@ -42,6 +44,9 @@ async def _probe(host: str, port: int, timeout: float, sem: asyncio.Semaphore) -
 
 
 async def scan(host: str, start: int, end: int, timeout: float, concurrency: int) -> list[int]:
+    _require_private(host)
+    if not (1 <= start <= end <= 65535):
+        raise ValueError("port range must be within 1-65535")
     if concurrency < 1:
         raise ValueError("concurrency must be at least 1")
     if not math.isfinite(timeout) or timeout <= 0:
@@ -68,7 +73,10 @@ def main() -> None:
         parser.error("--concurrency en az 1 olmali")
     if not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error("--timeout sonlu ve sifirdan buyuk olmali")
-    _require_private(args.host)
+    try:
+        _require_private(args.host)
+    except ValueError as err:
+        parser.error(str(err))
 
     open_ports = asyncio.run(
         scan(args.host, args.start, args.end, args.timeout, args.concurrency)

@@ -100,8 +100,44 @@ class DnsTests(unittest.TestCase):
         self.assertEqual(dns.parse_question(packet), ("example.org", "A"))
         self.assertIsNone(dns.parse_question(b"short"))
 
+    def test_dns_question_rejects_terminal_controls_and_missing_class(self):
+        header = struct.pack("!6H", 1, 0x100, 1, 0, 0, 0)
+        for question in (b"\x03a\x1bb\x00\x00\x01\x00\x01",
+                         b"\x01a\x00\x00\x01", b"\x04ab"):
+            self.assertIsNone(dns.parse_question(header + question))
+
+    def test_dns_forward_checks_peer_transaction_and_response_flag(self):
+        query = struct.pack("!6H", 12, 0x100, 1, 0, 0, 0) + b"\x01a\x00\x00\x01\x00\x01"
+        for ident, flags, allowed in ((12, 0x8180, True), (13, 0x8180, False), (12, 0x100, False)):
+            reply = struct.pack("!6H", ident, flags, 1, 0, 0, 0) + query[12:]
+            with self.subTest(ident=ident, flags=flags), patch.object(dns.socket, "socket") as factory:
+                srv = unittest.mock.Mock()
+                factory.return_value.recv.return_value = reply
+                dns.forward(srv, query, ("127.0.0.1", 1000), "127.0.0.2")
+                factory.return_value.connect.assert_called_once_with(("127.0.0.2", 53))
+                factory.return_value.send.assert_called_once_with(query)
+                self.assertEqual(srv.sendto.call_count, int(allowed))
+                factory.return_value.close.assert_called_once()
+
+    def test_dns_default_listens_on_loopback_only(self):
+        with patch("sys.argv", ["dns_logger.py"]), patch("builtins.print"), \
+             patch.object(dns.socket, "socket") as factory:
+            factory.return_value.recvfrom.side_effect = KeyboardInterrupt
+            dns.main()
+            factory.return_value.bind.assert_called_once_with(("127.0.0.1", 53))
+
 
 class ScannerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_library_entry_rejects_public_reserved_and_invalid_port_ranges(self):
+        cases = [(host, 1, 1) for host in ("8.8.8.8", "0.0.0.0", "192.0.2.1", "example.com", "::")]
+        cases += [("127.0.0.1", start, end) for start, end in ((0, 1), (2, 1), (1, 65536))]
+        for host, start, end in cases:
+            with self.subTest(host=host, start=start, end=end), \
+                 patch.object(scanner.asyncio, "open_connection", new_callable=AsyncMock) as connect:
+                with self.assertRaises(ValueError):
+                    await scanner.scan(host, start, end, 1, 1)
+                connect.assert_not_called()
+
     async def test_invalid_concurrency_is_rejected_before_network(self):
         for concurrency in (0, -1):
             with self.subTest(concurrency=concurrency), \

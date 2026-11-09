@@ -9,10 +9,11 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.components.climate import HVACMode
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 
-from custom_components.cosa_cloud.api import CosaAPI, CosaAuthError, CosaError, CosaPartialUpdateError
+from custom_components.cosa_cloud.api import CosaAPI, CosaAuthError, CosaError, CosaPartialUpdateError, number
 from custom_components.cosa_cloud.climate import CosaClimate
 from custom_components.cosa_cloud.binary_sensor import CosaConnection, CosaHeating
 from custom_components.cosa_cloud.coordinator import CosaCoordinator
@@ -132,6 +133,125 @@ class APIBehavior(unittest.IsolatedAsyncioTestCase):
             await api.devices()
         self.assertEqual(len(session.calls), 1)
 
+    async def test_off_on_roundtrip_restores_observed_working_mode(self):
+        for mode, option in (("auto", "away"), ("schedule", "sleep"),
+                             ("manual", "home"), ("manual", "away"),
+                             ("manual", "sleep"), ("manual", "custom")):
+            with self.subTest(mode=mode, option=option):
+                active = DEVICE | {"mode": mode, "option": option}
+                frozen = DEVICE | {"mode": "manual", "option": "frozen"}
+                api, session = self.client({"ok": 1, "endpoint": active}, {"ok": 1},
+                                           {"ok": 1, "endpoint": frozen}, {"ok": 1})
+                api.token = "fake"
+                await api.set_enabled("test-device", False)
+                await api.set_enabled("test-device", True)
+                self.assertEqual(session.calls[1][1]["json"],
+                    {"endpoint": "test-device", "mode": "manual", "option": "frozen"})
+                expected = {"endpoint": "test-device", "mode": mode}
+                if mode == "manual":
+                    expected["option"] = option
+                self.assertEqual(session.calls[3][1]["json"], expected)
+                self.assertTrue(all(c[0].rsplit("/", 1)[1] in ("getEndpoint", "setMode")
+                                    for c in session.calls))
+
+    async def test_on_already_enabled_preserves_auto_schedule_and_manual(self):
+        for mode, option in (("auto", "away"), ("schedule", "sleep"), ("manual", "custom")):
+            api, session = self.client({"ok": 1, "endpoint": DEVICE | {"mode": mode, "option": option}})
+            api.token = "fake"
+            await api.set_enabled("test-device", True)
+            self.assertEqual(len(session.calls), 1)
+
+    async def test_repeated_off_keeps_original_schedule(self):
+        frozen = DEVICE | {"mode": "manual", "option": "frozen"}
+        api, session = self.client({"ok": 1, "endpoint": DEVICE | {"mode": "schedule"}}, {"ok": 1},
+                                  {"ok": 1, "endpoint": frozen},
+                                  {"ok": 1, "endpoint": frozen}, {"ok": 1})
+        api.token = "fake"
+        await api.set_enabled("test-device", False)
+        await api.set_enabled("test-device", False)
+        await api.set_enabled("test-device", True)
+        self.assertEqual(session.calls[-1][1]["json"], {"endpoint": "test-device", "mode": "schedule"})
+        self.assertEqual(len(session.calls), 5)
+
+    async def test_starting_frozen_requires_explicit_profile_without_writes(self):
+        api, session = self.client({"ok": 1, "endpoint": DEVICE | {"option": "frozen"}})
+        api.token = "fake"
+        with self.assertRaisesRegex(CosaError, "select a preset explicitly"):
+            await api.set_enabled("test-device", True)
+        self.assertEqual(len(session.calls), 1)
+
+    async def test_fresh_external_mode_wins_over_older_resume_intent(self):
+        api, session = self.client({"ok": 1, "endpoint": DEVICE | {"mode": "schedule"}},
+            {"ok": 1, "endpoint": DEVICE | {"mode": "auto"}}, {"ok": 1},
+            {"ok": 1, "endpoint": DEVICE | {"option": "frozen"}}, {"ok": 1})
+        api.token = "fake"
+        await api.device("test-device")
+        await api.set_enabled("test-device", False)
+        await api.set_enabled("test-device", True)
+        self.assertEqual(session.calls[-1][1]["json"], {"endpoint": "test-device", "mode": "auto"})
+
+    async def test_unknown_mode_cannot_restore_stale_profile(self):
+        api, session = self.client({"ok": 1, "endpoint": DEVICE},
+            {"ok": 1, "endpoint": DEVICE | {"mode": "turbo"}},
+            {"ok": 1, "endpoint": DEVICE | {"option": "frozen"}})
+        api.token = "fake"
+        await api.device("test-device")
+        with self.assertRaises(CosaError):
+            await api.set_enabled("test-device", True)
+        with self.assertRaises(CosaError):
+            await api.set_enabled("test-device", True)
+        self.assertEqual(len(session.calls), 3)
+
+    async def test_resume_history_never_crosses_device_ids(self):
+        api, session = self.client({"ok": 1, "endpoint": DEVICE},
+            {"ok": 1, "endpoint": DEVICE | {"id": "other-device", "option": "frozen"}})
+        api.token = "fake"
+        await api.device("test-device")
+        with self.assertRaises(CosaError):
+            await api.set_enabled("other-device", True)
+        self.assertEqual(len(session.calls), 2)
+
+    async def test_offline_snapshot_cannot_replace_last_online_profile(self):
+        api, session = self.client({"ok": 1, "endpoint": DEVICE | {"mode": "schedule"}},
+            {"ok": 1, "endpoint": DEVICE | {"device": {"isConnected": False}}},
+            {"ok": 1, "endpoint": DEVICE | {"option": "frozen"}}, {"ok": 1})
+        api.token = "fake"
+        await api.device("test-device")
+        await api.device("test-device")
+        await api.set_enabled("test-device", True)
+        self.assertEqual(session.calls[-1][1]["json"], {"endpoint": "test-device", "mode": "schedule"})
+
+    async def test_mode_write_timeout_is_not_retried_and_resume_intent_survives(self):
+        api, session = self.client({"ok": 1, "endpoint": DEVICE | {"mode": "schedule"}},
+            TimeoutError("private detail"),
+            {"ok": 1, "endpoint": DEVICE | {"option": "frozen"}}, {"ok": 1})
+        api.token = "fake"
+        with self.assertRaises(CosaError) as caught:
+            await api.set_enabled("test-device", False)
+        self.assertNotIn("private", str(caught.exception))
+        self.assertEqual(len(session.calls), 2)
+        # A new explicit user action may resume after a timeout applied remotely.
+        await api.set_enabled("test-device", True)
+        self.assertEqual(session.calls[-1][1]["json"], {"endpoint": "test-device", "mode": "schedule"})
+
+    async def test_missing_identity_and_offline_devices_block_enable_writes(self):
+        for endpoint in ({k: v for k, v in DEVICE.items() if k != "id"},
+                         DEVICE | {"device": {"isConnected": False}}):
+            api, session = self.client({"ok": 1, "endpoint": endpoint})
+            api.token = "fake"
+            with self.assertRaises(CosaError):
+                await api.set_enabled("test-device", False)
+            self.assertEqual(len(session.calls), 1)
+
+    async def test_invalid_enable_value_rejected_before_network(self):
+        api, session = self.client()
+        with self.assertRaises(CosaError):
+            await api.set_enabled("test-device", "true")
+        self.assertEqual(session.calls, [])
+
+    async def test_huge_numeric_reading_stays_unknown(self):
+        self.assertIsNone(number(10 ** 1000))
+
 
 class HomeAssistantBehavior(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -177,6 +297,72 @@ class HomeAssistantBehavior(unittest.IsolatedAsyncioTestCase):
         self.coordinator.api.device = AsyncMock(side_effect=CosaAuthError("Login required"))
         with self.assertRaises(ConfigEntryAuthFailed):
             await self.coordinator._async_update_data()
+
+    async def test_hvac_heat_and_turn_on_share_preserving_api(self):
+        self.coordinator.async_control = AsyncMock()
+        await self.climate.async_turn_on()
+        await self.climate.async_set_hvac_mode(HVACMode.HEAT)
+        self.assertEqual(self.coordinator.async_control.await_count, 2)
+        self.assertTrue(all(c.args == ("set_enabled", True)
+                            for c in self.coordinator.async_control.await_args_list))
+
+    async def test_turn_off_uses_suspend_api(self):
+        self.coordinator.async_control = AsyncMock()
+        await self.climate.async_turn_off()
+        self.coordinator.async_control.assert_awaited_once_with("set_enabled", False)
+
+    async def test_explicit_home_and_schedule_profiles_remain_available(self):
+        self.coordinator.async_control = AsyncMock()
+        await self.climate.async_set_preset_mode("home")
+        self.coordinator.async_control.assert_awaited_with("set_mode", "manual", "home")
+        await self.climate.async_set_preset_mode("schedule")
+        self.coordinator.async_control.assert_awaited_with("set_mode", "schedule")
+
+    async def test_resume_failure_keeps_observed_frozen_state_and_reads_back(self):
+        self.coordinator.data["option"] = "frozen"
+        self.coordinator.api.set_enabled = AsyncMock(side_effect=CosaError("Previous profile unknown"))
+        self.coordinator.async_request_refresh = AsyncMock()
+        with self.assertRaises(HomeAssistantError):
+            await self.climate.async_turn_on()
+        self.assertEqual(self.climate.hvac_mode, HVACMode.OFF)
+        self.coordinator.async_request_refresh.assert_awaited_once()
+
+    async def test_auto_and_schedule_roundtrip_through_entity_api_and_readback(self):
+        class StatefulSession:
+            def __init__(self, state):
+                self.state = deepcopy(state)
+                self.writes = []
+
+            def post(self, url, **kwargs):
+                if url.endswith("/getEndpoint"):
+                    return Response({"ok": 1, "endpoint": deepcopy(self.state)})
+                if url.endswith("/setMode"):
+                    payload = deepcopy(kwargs["json"])
+                    self.writes.append(payload)
+                    self.state.update({k: v for k, v in payload.items() if k != "endpoint"})
+                    return Response({"ok": 1})
+                raise AssertionError("Unexpected API operation")
+
+        async def readback():
+            self.coordinator.data = await self.coordinator._async_update_data()
+
+        for mode, preset in (("auto", "automatic"), ("schedule", "schedule")):
+            with self.subTest(mode=mode):
+                session = StatefulSession(DEVICE | {"mode": mode})
+                self.coordinator.api = CosaAPI(session, "test@example.invalid", "fake")
+                self.coordinator.api.token = "fake"
+                self.coordinator.data = deepcopy(session.state)
+                self.coordinator.async_request_refresh = AsyncMock(side_effect=readback)
+                await self.climate.async_turn_off()
+                self.assertEqual(self.climate.hvac_mode, HVACMode.OFF)
+                await self.climate.async_turn_on()
+                self.assertEqual(self.climate.hvac_mode, HVACMode.HEAT)
+                self.assertEqual(self.climate.preset_mode, preset)
+                self.assertEqual(session.writes, [
+                    {"endpoint": "test-device", "mode": "manual", "option": "frozen"},
+                    {"endpoint": "test-device", "mode": mode}])
+                self.assertEqual(session.state["homeTemperature"], DEVICE["homeTemperature"])
+                self.coordinator.async_request_refresh.assert_has_awaits([unittest.mock.call(), unittest.mock.call()])
 
     async def test_flow_bad_credentials_returns_form_not_entry(self):
         flow = CosaConfigFlow()

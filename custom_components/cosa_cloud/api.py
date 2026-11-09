@@ -34,7 +34,11 @@ def number(value, minimum=None, maximum=None):
     """Missing, boolean, non-finite and out-of-range readings stay unknown."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    if not math.isfinite(value):
+    try:
+        finite = math.isfinite(value)
+    except OverflowError:
+        return None
+    if not finite:
         return None
     if minimum is not None and value < minimum:
         return None
@@ -50,6 +54,9 @@ class CosaAPI:
         self.password = password
         self.token = None
         self._lock = asyncio.Lock()
+        # Observed control intent only, scoped to a device and this API lifetime.
+        # A restart while frozen requires an explicit preset selection.
+        self._resume_modes = {}
 
     async def _request(self, operation, payload):
         headers = {"provider": "cosa", "Accept": "application/json"}
@@ -107,10 +114,20 @@ class CosaAPI:
         endpoint = data.get("endpoint")
         if not isinstance(endpoint, dict) or not endpoint:
             raise CosaError("Cosa device response is empty or malformed")
-        if endpoint.get("id", endpoint_id) != endpoint_id:
+        if endpoint.get("id") != endpoint_id:
             raise CosaError("Cosa returned a different device")
         if not isinstance(endpoint.get("device"), dict):
             raise CosaError("Cosa device connection data is missing")
+        if endpoint["device"].get("isConnected") is not True:
+            return endpoint  # Offline snapshots cannot replace resume intent.
+        mode, option = endpoint.get("mode"), endpoint.get("option")
+        if mode in ("auto", "schedule"):
+            self._resume_modes[endpoint_id] = (mode, None)
+        elif mode == "manual" and option in ("home", "away", "sleep", "custom"):
+            self._resume_modes[endpoint_id] = (mode, option)
+        elif (mode, option) != ("manual", "frozen"):
+            # An unsupported observed mode must not revive an older intent.
+            self._resume_modes.pop(endpoint_id, None)
         return endpoint
 
     async def device(self, endpoint_id):
@@ -132,6 +149,33 @@ class CosaAPI:
             payload = {"endpoint": endpoint_id, "mode": mode}
             if mode == "manual":
                 payload["option"] = option
+            await self._request("mode", payload)
+
+    async def set_enabled(self, endpoint_id, enabled):
+        """Suspend/resume without selecting a different working profile."""
+        if not isinstance(enabled, bool):
+            raise CosaError("Enabled must be a boolean")
+        async with self._lock:
+            endpoint = await self._device(endpoint_id)
+            self._require_connected(endpoint)
+            frozen = (endpoint.get("mode"), endpoint.get("option")) == ("manual", "frozen")
+            if not enabled:
+                if frozen:
+                    return
+                payload = {"endpoint": endpoint_id, "mode": "manual", "option": "frozen"}
+            else:
+                if not frozen:
+                    if endpoint_id in self._resume_modes:
+                        return  # Already enabled: preserve the current profile.
+                    raise CosaError("Current Cosa mode is unknown; select a preset explicitly")
+                previous = self._resume_modes.get(endpoint_id)
+                if previous is None:
+                    raise CosaError("Previous Cosa profile is unknown; select a preset explicitly")
+                mode, option = previous
+                payload = {"endpoint": endpoint_id, "mode": mode}
+                if mode == "manual":
+                    payload["option"] = option
+            # Do not retry a write, including a timeout with an unknown outcome.
             await self._request("mode", payload)
 
     async def set_temperature(self, endpoint_id, temperature):

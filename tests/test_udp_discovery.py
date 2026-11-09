@@ -53,6 +53,13 @@ class DiscoveryTests(unittest.TestCase):
         self.assertIsNone(udp.summarize("mdns", udp.mdns_query(1), 1, b""))
         self.assertIsNone(udp.summarize("mdns", struct.pack("!6H", 2, 0x8400, 0, 1, 0, 0), 1, b""))
 
+    def test_reset_must_be_empty_and_match_message_id(self):
+        reset = b"\x70\x00\x12\x34"
+        self.assertEqual(udp.summarize("coap", reset, 0x1234, b"test"),
+                         {"status": "reset", "bytes": 4})
+        for data in (reset + b"payload", b"\x74\x45\x12\x34test", b"\x70\x00\x12\x35"):
+            self.assertIsNone(udp.summarize("coap", data, 0x1234, b"test"))
+
     def test_silence_sends_one_packet_without_retry_or_dns(self):
         with patch.object(udp.socket, "socket") as factory:
             sock = factory.return_value.__enter__.return_value
