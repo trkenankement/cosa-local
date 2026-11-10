@@ -68,7 +68,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class CosaScheduleCalendar(CosaEntity, CalendarEntity):
     """A calendar projection; Cosa remains the only schedule store."""
 
-    _attr_name = None
     _attr_translation_key = "weekly_schedule"
 
     def __init__(self, coordinator):

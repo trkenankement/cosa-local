@@ -24,7 +24,7 @@ Kendi hesabımızda bakımı yapılan `cosa_cloud` entegrasyonu; Home Assistant 
 `cosa_cloud.get_schedule` eylemi Cosa cihazındaki yedi günlük programı çağrıldığında okur.
 `cosa_cloud.set_schedule` eylemi tüm haftayı tek seferde yazar ve cihazdan geri okuyarak doğrular.
 Bu eylemler yeni bir sürekli sorgu veya otomasyon oluşturmaz.
-`calendar.cosa_termostat_salon_haftalik_program` gibi bir takvim varlığı,
+`Cosa Termostat Haftalık program` adlı takvim varlığı,
 cihazdan zaten alınan programı Home Assistant'ın Takvim görünümünde ve yerleşik
 Takvim kartında gösterir; bunun için ayrı bir API sorgusu veya yerel program
 kopyası tutulmaz. Cosa haftalık modda değilse takvimde program görünür ama
