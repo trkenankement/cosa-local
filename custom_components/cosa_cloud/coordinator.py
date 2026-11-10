@@ -28,7 +28,7 @@ class CosaCoordinator(DataUpdateCoordinator):
 
     async def async_control(self, operation, *args):
         try:
-            await getattr(self.api, operation)(self.endpoint_id, *args)
+            return await getattr(self.api, operation)(self.endpoint_id, *args)
         except CosaAuthError as err:
             self.config_entry.async_start_reauth(self.hass)
             raise HomeAssistantError(str(err)) from None
@@ -37,3 +37,12 @@ class CosaCoordinator(DataUpdateCoordinator):
         finally:
             # State is always read back, never set optimistically.
             await self.async_request_refresh()
+
+    async def async_get_schedule(self):
+        try:
+            return await self.api.get_schedule(self.endpoint_id)
+        except CosaAuthError as err:
+            self.config_entry.async_start_reauth(self.hass)
+            raise HomeAssistantError(str(err)) from None
+        except CosaError as err:
+            raise HomeAssistantError(str(err)) from None

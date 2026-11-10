@@ -13,16 +13,19 @@ from homeassistant.components.climate import HVACMode
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 
-from custom_components.cosa_cloud.api import CosaAPI, CosaAuthError, CosaError, CosaPartialUpdateError, number
+from custom_components.cosa_cloud.api import CosaAPI, CosaAuthError, CosaError, CosaPartialUpdateError, number, normalize_schedule
 from custom_components.cosa_cloud.climate import CosaClimate
 from custom_components.cosa_cloud.binary_sensor import CosaConnection, CosaHeating
 from custom_components.cosa_cloud.coordinator import CosaCoordinator
 from custom_components.cosa_cloud.config_flow import CosaConfigFlow
+from custom_components.cosa_cloud.services import register, unregister
 
 DEVICE = {"id": "test-device", "name": "Test thermostat", "device": {"isConnected": True},
           "temperature": 20.5, "humidity": 0, "mode": "manual", "option": "home",
           "homeTemperature": 21, "awayTemperature": 16, "sleepTemperature": 19,
           "customTemperature": 22, "combiState": "off"}
+SCHEDULE = {day: {"0": "sleep", "420": "away", "1020": "home"} for day in
+            ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")}
 
 
 class Response:
@@ -252,6 +255,53 @@ class APIBehavior(unittest.IsolatedAsyncioTestCase):
     async def test_huge_numeric_reading_stays_unknown(self):
         self.assertIsNone(number(10 ** 1000))
 
+    async def test_schedule_is_read_on_demand(self):
+        api, session = self.client({"ok": 1, "endpoint": DEVICE | {"schedule": SCHEDULE}})
+        api.token = "test"
+        self.assertEqual(await api.get_schedule("test-device"), SCHEDULE)
+        self.assertEqual(len(session.calls), 1)
+
+    async def test_schedule_write_uses_live_payload_and_checks_readback(self):
+        api, session = self.client({"ok": 1, "endpoint": DEVICE | {"schedule": SCHEDULE}},
+                                   {"ok": 1}, {"ok": 1, "endpoint": DEVICE | {"schedule": SCHEDULE}})
+        api.token = "test"
+        self.assertEqual(await api.set_schedule("test-device", SCHEDULE), SCHEDULE)
+        self.assertTrue(session.calls[1][0].endswith("/api/endpoints/setSchedule"))
+        self.assertEqual(session.calls[1][1]["json"], {"endpoint": "test-device", "schedule": SCHEDULE})
+        self.assertEqual(len(session.calls), 3)
+
+    async def test_schedule_write_rejects_mismatch_and_never_retries(self):
+        api, session = self.client({"ok": 1, "endpoint": DEVICE | {"schedule": SCHEDULE}},
+                                   {"ok": 1}, {"ok": 1, "endpoint": DEVICE | {"schedule": {}}})
+        api.token = "test"
+        with self.assertRaises(CosaError):
+            await api.set_schedule("test-device", SCHEDULE)
+        self.assertEqual(len([c for c in session.calls if c[0].endswith("setSchedule")]), 1)
+
+    async def test_invalid_schedule_and_offline_device_never_write(self):
+        invalid = [None, {}, SCHEDULE | {"monday": {}},
+                   SCHEDULE | {"monday": {"420": "home"}},
+                   SCHEDULE | {"monday": {"0": "turbo"}},
+                   SCHEDULE | {"monday": {"0": []}},
+                   SCHEDULE | {"monday": {"0": "home", "9" * 5000: "away"}},
+                   SCHEDULE | {"monday": {"0": "home", "1440": "away"}}]
+        for schedule in invalid:
+            with self.subTest(schedule=schedule):
+                api, session = self.client()
+                with self.assertRaises(CosaError):
+                    await api.set_schedule("test-device", schedule)
+                self.assertEqual(session.calls, [])
+        api, session = self.client({"ok": 1, "endpoint": DEVICE | {"device": {"isConnected": False}}})
+        api.token = "test"
+        with self.assertRaises(CosaError):
+            await api.set_schedule("test-device", SCHEDULE)
+        self.assertEqual(len(session.calls), 1)
+
+    def test_schedule_accepts_yaml_integer_minute_keys(self):
+        schedule = deepcopy(SCHEDULE)
+        schedule["monday"] = {0: "sleep", 420: "away", 1020: "home"}
+        self.assertEqual(normalize_schedule(schedule), SCHEDULE)
+
 
 class HomeAssistantBehavior(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -381,6 +431,28 @@ class HomeAssistantBehavior(unittest.IsolatedAsyncioTestCase):
              patch.object(CosaAPI, "devices", AsyncMock(return_value=devices)):
             result = await flow.async_step_user({"email": "test@example.invalid", "password": "fake"})
         self.assertEqual(result["step_id"], "device")
+
+    async def test_schedule_actions_are_on_demand_and_return_verified_result(self):
+        self.coordinator.async_get_schedule = AsyncMock(return_value=SCHEDULE)
+        self.coordinator.async_control = AsyncMock(return_value=SCHEDULE)
+        register(self.hass)
+        try:
+            with patch("custom_components.cosa_cloud.services._coordinator", return_value=self.coordinator):
+                read = await self.hass.services.async_call(
+                    "cosa_cloud", "get_schedule", {"entity_id": "climate.cosa"},
+                    blocking=True, return_response=True,
+                )
+                written = await self.hass.services.async_call(
+                    "cosa_cloud", "set_schedule",
+                    {"entity_id": "climate.cosa", "schedule": SCHEDULE},
+                    blocking=True, return_response=True,
+                )
+            self.assertEqual(read, {"schedule": SCHEDULE})
+            self.assertEqual(written, {"verified": True, "schedule": SCHEDULE})
+            self.coordinator.async_get_schedule.assert_awaited_once()
+            self.coordinator.async_control.assert_awaited_once_with("set_schedule", SCHEDULE)
+        finally:
+            unregister(self.hass)
 
 
 if __name__ == "__main__":

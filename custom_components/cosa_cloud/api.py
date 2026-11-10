@@ -11,7 +11,11 @@ PATHS = {
     "device": "/api/endpoints/getEndpoint",
     "mode": "/api/endpoints/setMode",
     "temperature": "/api/endpoints/setTargetTemperatures",
+    "schedule": "/api/endpoints/setSchedule",
 }
+
+DAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+SCHEDULE_PRESETS = frozenset(("home", "away", "sleep"))
 
 
 class CosaError(Exception):
@@ -45,6 +49,35 @@ def number(value, minimum=None, maximum=None):
     if maximum is not None and value > maximum:
         return None
     return value
+
+
+def normalize_schedule(schedule):
+    """Validate a complete Cosa week before allowing a write."""
+    if not isinstance(schedule, dict) or set(schedule) != set(DAYS):
+        raise CosaError("Schedule must contain all seven days")
+    normalized = {}
+    for day in DAYS:
+        slots = schedule[day]
+        if not isinstance(slots, dict) or not 1 <= len(slots) <= 48:
+            raise CosaError("Each day needs 1 to 48 time slots")
+        normalized_slots = {}
+        for minute, preset in slots.items():
+            if isinstance(minute, bool) or not isinstance(minute, (str, int)):
+                raise CosaError("Schedule times must be minutes after midnight")
+            minute_text = str(minute)
+            if len(minute_text) > 4 or not minute_text.isascii() or not minute_text.isdecimal():
+                raise CosaError("Schedule times must be minutes after midnight")
+            minute_number = int(minute_text)
+            if not 0 <= minute_number < 1440 or not isinstance(preset, str) or preset not in SCHEDULE_PRESETS:
+                raise CosaError("Schedule contains an invalid time or preset")
+            key = str(minute_number)
+            if key in normalized_slots:
+                raise CosaError("Schedule contains duplicate times")
+            normalized_slots[key] = preset
+        if "0" not in normalized_slots:
+            raise CosaError("Each day must start at midnight")
+        normalized[day] = dict(sorted(normalized_slots.items(), key=lambda item: int(item[0])))
+    return normalized
 
 
 class CosaAPI:
@@ -133,6 +166,25 @@ class CosaAPI:
     async def device(self, endpoint_id):
         async with self._lock:
             return await self._device(endpoint_id)
+
+    async def get_schedule(self, endpoint_id):
+        async with self._lock:
+            endpoint = await self._device(endpoint_id)
+            schedule = endpoint.get("schedule")
+            if not isinstance(schedule, dict):
+                raise CosaError("Cosa did not return a weekly schedule")
+            return schedule
+
+    async def set_schedule(self, endpoint_id, schedule):
+        normalized = normalize_schedule(schedule)
+        async with self._lock:
+            endpoint = await self._device(endpoint_id)
+            self._require_connected(endpoint)
+            await self._request("schedule", {"endpoint": endpoint_id, "schedule": normalized})
+            confirmed = await self._device(endpoint_id)
+            if confirmed.get("schedule") != normalized:
+                raise CosaResponseError("Cosa did not confirm the weekly schedule")
+            return normalized
 
     @staticmethod
     def _require_connected(endpoint):
