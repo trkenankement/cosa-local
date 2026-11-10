@@ -37,6 +37,11 @@
     }
   },
   "entity": {
+    "calendar": {
+      "weekly_schedule": {
+        "name": "Weekly schedule"
+      }
+    },
     "sensor": {
       "temperature": {
         "name": "Temperature"

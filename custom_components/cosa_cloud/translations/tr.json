@@ -37,6 +37,11 @@
     }
   },
   "entity": {
+    "calendar": {
+      "weekly_schedule": {
+        "name": "Haftalık program"
+      }
+    },
     "sensor": {
       "temperature": {
         "name": "Sıcaklık"
