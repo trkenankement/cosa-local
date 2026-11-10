@@ -1,6 +1,7 @@
 """Offline behavior tests, using the actual HA 2026.11 entity classes."""
 import asyncio
 from copy import deepcopy
+from datetime import datetime, timezone
 import logging
 from pathlib import Path
 import tempfile
@@ -15,6 +16,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 
 from custom_components.cosa_cloud.api import CosaAPI, CosaAuthError, CosaError, CosaPartialUpdateError, number, normalize_schedule
 from custom_components.cosa_cloud.climate import CosaClimate
+from custom_components.cosa_cloud.calendar import CosaScheduleCalendar, schedule_events
 from custom_components.cosa_cloud.binary_sensor import CosaConnection, CosaHeating
 from custom_components.cosa_cloud.coordinator import CosaCoordinator
 from custom_components.cosa_cloud.config_flow import CosaConfigFlow
@@ -453,6 +455,40 @@ class HomeAssistantBehavior(unittest.IsolatedAsyncioTestCase):
             self.coordinator.async_control.assert_awaited_once_with("set_schedule", SCHEDULE)
         finally:
             unregister(self.hass)
+
+    async def test_calendar_shows_cosa_slots_without_new_api_requests(self):
+        self.coordinator.data["schedule"] = SCHEDULE
+        self.coordinator.data["timeZone"] = "Europe/Istanbul"
+        self.coordinator.data["mode"] = "schedule"
+        self.coordinator.data["schedulePresetType"] = 4
+        calendar = CosaScheduleCalendar(self.coordinator)
+        start = datetime(2026, 11, 9, 0, tzinfo=timezone.utc)
+        end = datetime(2026, 11, 10, 0, tzinfo=timezone.utc)
+        events = await calendar.async_get_events(self.hass, start, end)
+        self.assertTrue(any(event.summary == "Dışarı · 16 °C" and
+                            event.start.hour == 7 for event in events))
+        self.assertTrue(any(event.summary == "Ev · 21 °C" and
+                            event.start.hour == 17 for event in events))
+        self.assertEqual(self.coordinator.api.session.calls, [])
+
+    async def test_calendar_current_event_uses_local_time(self):
+        self.coordinator.data["schedule"] = SCHEDULE
+        self.coordinator.data["timeZone"] = "Europe/Istanbul"
+        self.coordinator.data["mode"] = "schedule"
+        self.coordinator.data["schedulePresetType"] = 4
+        calendar = CosaScheduleCalendar(self.coordinator)
+        with patch("custom_components.cosa_cloud.calendar.dt_util.now",
+                   return_value=datetime(2026, 11, 9, 15, tzinfo=timezone.utc)):
+            self.assertEqual(calendar.event.summary, "Ev · 21 °C")
+        self.coordinator.data["mode"] = "manual"
+        self.assertIsNone(calendar.event)
+        events = await calendar.async_get_events(
+            self.hass,
+            datetime(2026, 11, 9, 0, tzinfo=timezone.utc),
+            datetime(2026, 11, 10, 0, tzinfo=timezone.utc),
+        )
+        self.assertTrue(events)
+        self.assertTrue(all("etkin değil" in event.description for event in events))
 
 
 if __name__ == "__main__":
