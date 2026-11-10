@@ -19,6 +19,29 @@ Kendi hesabımızda bakımı yapılan `cosa_cloud` entegrasyonu; Home Assistant 
 - Başarısız yazmalar otomatik tekrarlanmaz. Durum buluttan yeniden okunur; komut başarılı görünmesi için tahmini değer üretilmez.
 - Hesap bilgileri HA yapılandırmasında saklanır; bu deponun veya GitHub'ın parolaya ihtiyacı yoktur. HAM yanıtlar ve kimlik bilgileri günlüğe yazılmaz.
 
+### Cosa'nın haftalık programı
+
+`cosa_cloud.get_schedule` eylemi Cosa cihazındaki yedi günlük programı çağrıldığında okur.
+`cosa_cloud.set_schedule` eylemi tüm haftayı tek seferde yazar ve cihazdan geri okuyarak doğrular.
+Bu eylemler sürekli sorgu, ek HA varlığı, otomasyon veya geçmiş kaydı oluşturmaz.
+Günlük saat anahtarları gece yarısından sonraki dakikadır; `0` = 00:00,
+`420` = 07:00, `1020` = 17:00. Değerler `home`, `away` veya `sleep` olabilir.
+Yazmadan önce `get_schedule` sonucunu alıp yalnız istediğiniz saatleri değiştirin;
+yazma eylemi yedi günün tamamını bekler. Cosa'nın hazır programı seçiliyse
+güncellediğiniz manuel programın çalışması için cihazdaki program türü 4 olmalıdır.
+
+Geliştirici Araçları → Eylemler içinde okuma örneği:
+
+```yaml
+action: cosa_cloud.get_schedule
+data:
+  entity_id: climate.salon_evr
+```
+
+Yazma için `action: cosa_cloud.set_schedule` ve aynı `entity_id` ile birlikte
+`schedule:` altında `monday`–`sunday` günlerinin tamamını verin. Okuma sonucundaki
+biçimi kullanabilirsiniz. Yazma yalnız açıkça çağrıldığında yapılır.
+
 Kurulum: `custom_components/cosa_cloud` klasörünü HA `config/custom_components/` altına koy, HA'yı yeniden başlat, **Ayarlar → Cihazlar ve hizmetler → Entegrasyon ekle → Cosa Cloud** ekranından hesabını bağla. Geri almak için entegrasyonu kaldırıp bileşen klasörünü yedek konuma taşı ve HA'yı yeniden başlat.
 
 Bu sürüm için Nuvia'nın HTTPS API alanları topluluk projesi [ahamitd/cosa-homeassistant](https://github.com/ahamitd/cosa-homeassistant) incelenerek öğrenildi. İstemci, yapılandırma akışı ve varlıklar bu depo için yeniden yazıldı. Cosa/Nuvia ile resmî bağlantımız yoktur.

@@ -1,0 +1,29 @@
+get_schedule:
+  name: Haftalık programı oku
+  description: Cosa'daki programı yalnız bu eylem çağrıldığında okur. Yeni geçmiş kaydı veya zamanlama varlığı oluşturmaz.
+  fields:
+    entity_id:
+      name: Termostat
+      required: true
+      selector:
+        entity:
+          domain: climate
+          integration: cosa_cloud
+
+set_schedule:
+  name: Haftalık programı güncelle
+  description: Cosa'daki yedi günlük programı bir kez yazar, geri okuyarak doğrular. Çalışma modunu değiştirmez.
+  fields:
+    entity_id:
+      name: Termostat
+      required: true
+      selector:
+        entity:
+          domain: climate
+          integration: cosa_cloud
+    schedule:
+      name: Yedi günlük program
+      description: "Her gün 0. dakikada başlamalı. Saatler gece yarısından sonraki dakika; değerler home, away veya sleep."
+      required: true
+      selector:
+        object:
