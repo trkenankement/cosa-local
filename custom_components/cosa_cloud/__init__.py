@@ -6,7 +6,7 @@ from .coordinator import CosaCoordinator
 from .const import DOMAIN
 from .services import register, unregister
 
-PLATFORMS = [Platform.CLIMATE, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.CALENDAR]
+PLATFORMS = [Platform.CLIMATE, Platform.SENSOR, Platform.BINARY_SENSOR]
 
 
 async def async_setup_entry(hass, entry):
