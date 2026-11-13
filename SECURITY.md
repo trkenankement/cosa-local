@@ -8,7 +8,7 @@ Bu depo iki ayrı çalışma içerir: yerel protokol araştırması ve kullanıc
 - Cosa hesabı kullanıcı tarafından HA ekranına girilir ve HA'nın yapılandırma depolamasında saklanır. Belirteç bellekte tutulur. Hesap bilgileri, cihaz yanıtları veya özel ağ bilgileri depoya, tanılama çıktısına ve günlüklere yazılmaz.
 - Ağ kopması başarı gibi gösterilmez. Eksik sıcaklıklar için varsayılan değerle ısıtma komutu üretilmez. Yazma istekleri otomatik tekrarlanmaz.
 - Her kurulum yalnız seçilen termostatı yönetir. Başlangıçta, yeniden bağlantıda ve periyodik sorgularda ısıtma komutu gönderilmez.
-- Yalnız hedef sıcaklık ve mod kontrolü sunulur; firmware, eşleştirme, kombi PID ayarı veya kalibrasyon değiştirilmez.
+- Hedef sıcaklık ve mod kontrolü ile kullanıcının açıkça çağırdığı haftalık program okuma/yazma eylemleri sunulur; firmware, eşleştirme, kombi PID ayarı veya kalibrasyon değiştirilmez.
 
 ## Yerel araştırma kapsamı
 
@@ -16,7 +16,7 @@ Aşağıdaki yerel çalışma koşulları bulut entegrasyonunu kapsamaz:
 
 1. **Dışarıya çıkış yok.** Entegrasyon yalnızca kullanıcının yapılandırdığı yerel ağ adresiyle konuşur. Kodda sabit bir bulut adresi, telemetri, analitik veya güncelleme sorgusu bulunmaz.
 2. **Hesap bilgisi yok.** Yerel kontrol bulut hesabı gerektirmez; e-posta, parola veya bulut belirteci istenmez ve saklanmaz.
-3. **Günlükte ham veri yok.** Cihaz yanıtlarının tamamı `DEBUG` düzeyinde bile günlüğe yazılmaz. Gerekirse yalnızca yapı bilgisi (alan adları, uzunluk) yazılır; sıcaklık, nem, mod ve MAC/IP gibi değerler maskelenir.
+3. **Günlükte ham cihaz verisi yok.** Cihaz yanıtlarının tamamı `DEBUG` düzeyinde bile günlüğe yazılmaz. Gerekirse yalnızca yapı bilgisi (alan adları, uzunluk) yazılır; sıcaklık, nem, mod ve MAC/IP gibi değerler maskelenir. Ayrı tanılama aracı `tools/dns_logger.py`, açıkça çalıştırıldığında istemci IP'sini ve sorgu adını terminalde gösterir; çıktısını paylaşmayın.
 4. **En az yetki.** CI iş akışları açık `permissions:` bildirir (varsayılan `contents: read`); üçüncü taraf aksiyonlar tam commit SHA'sına sabitlenir.
 5. **Depo temiz kalır.** Trafik kayıtları, tarama çıktıları, MAC/IP/seri numarası ve belirteçler depoya girmez (`.gitignore` bunları engeller).
 
