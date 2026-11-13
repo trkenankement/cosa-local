@@ -23,6 +23,16 @@ scanner = load("port_scan")
 
 
 class DnsTests(unittest.TestCase):
+    def test_dns_event_logging_is_rate_limited(self):
+        with patch.object(dns.time, "monotonic", side_effect=[0, 0, 0, 0, 0, 0, 2]), \
+             patch("builtins.print") as output:
+            logger = dns.RateLimitedLogger(limit=2)
+            for _ in range(5):
+                logger.write("query")
+            logger.write("next")
+        self.assertEqual(output.call_count, 4)
+        output.assert_any_call("  ! 3 gunluk satiri atlandi", flush=True)
+
     def test_workers_and_pending_queue_are_bounded_and_capacity_is_reused(self):
         gate, full, drained = threading.Event(), threading.Event(), threading.Event()
         lock = threading.Lock()

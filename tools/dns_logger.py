@@ -25,6 +25,35 @@ import time
 QTYPES = {1: "A", 28: "AAAA", 5: "CNAME", 15: "MX", 16: "TXT", 12: "PTR", 33: "SRV", 65: "HTTPS"}
 
 
+class RateLimitedLogger:
+    """Bound attacker-triggered terminal output, including forwarding errors."""
+
+    def __init__(self, limit: int = 20) -> None:
+        self.limit = limit
+        self._lock = threading.Lock()
+        self._window = time.monotonic()
+        self._written = 0
+        self._suppressed = 0
+
+    def write(self, message: str) -> None:
+        with self._lock:
+            now = time.monotonic()
+            if now - self._window >= 1:
+                if self._suppressed:
+                    print(f"  ! {self._suppressed} gunluk satiri atlandi", flush=True)
+                self._window = now
+                self._written = 0
+                self._suppressed = 0
+            if self._written >= self.limit:
+                self._suppressed += 1
+                return
+            print(message, flush=True)
+            self._written += 1
+
+
+EVENT_LOG = RateLimitedLogger()
+
+
 class BoundedForwarder:
     """Limit running and queued requests; drop overload so clients can retry."""
 
@@ -91,7 +120,7 @@ def forward(srv: socket.socket, data: bytes, addr: tuple, upstream: str) -> None
             srv.sendto(reply, addr)
     except OSError as exc:
         # ust sunucu yanit vermedi; istemci kendi yeniden denemesini yapar
-        print(f"  ! ust sunucu hatasi: {type(exc).__name__}", flush=True)
+        EVENT_LOG.write(f"  ! ust sunucu hatasi: {type(exc).__name__}")
     finally:
         up.close()
 
@@ -120,9 +149,9 @@ def main() -> None:
             except ConnectionResetError:
                 continue  # Windows: onceki cevaba ICMP "port ulasilamaz" dondu; yoksay
             q = parse_question(data)
-            if q and (args.client is None or addr[0] == args.client):
-                print(f"{time.strftime('%H:%M:%S')}  {addr[0]:<15}  {q[1]:<5}  {q[0]}", flush=True)
-            forwarder.submit(data, addr)
+            accepted = forwarder.submit(data, addr)
+            if accepted and q and (args.client is None or addr[0] == args.client):
+                EVENT_LOG.write(f"{time.strftime('%H:%M:%S')}  {addr[0]:<15}  {q[1]:<5}  {q[0]}")
     except KeyboardInterrupt:
         print("\nDurduruldu.")
     finally:
